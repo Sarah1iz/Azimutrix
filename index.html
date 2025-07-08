@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Conversor de Azimute e Rumo</title>
+    <style>
+        :root {
+            color-scheme: dark;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 40px;
+            background: #121212;
+            margin: 0;
+            color: #ffffff;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        body.light-mode {
+            background: #f0f4f8;
+            color: #000000;
+        }
+
+        .container {
+            background: #1e1e1e;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+            transition: background 0.3s;
+            position: relative;
+        }
+
+        body.light-mode .container {
+            background: #ffffff;
+        }
+
+        .toggle-theme {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #007BFF;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            font-size: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .toggle-theme:hover {
+            background: #0056b3;
+        }
+
+        .compass {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin: 20px auto;
+        }
+
+        .compass img {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .arrow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 4px;
+            height: 90px;
+            background: rgb(255, 123, 0);
+            border-radius: 4px;
+            transform-origin: bottom center;
+            transform: rotate(0deg);
+            transition: transform 0.5s ease-in-out;
+            margin-left: -2px;
+            margin-top: -90px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .form-group>* {
+            width: 100%;
+            max-width: 300px;
+            border-radius: 8px;
+        }
+
+        input,
+        select,
+        button {
+            padding: 10px;
+            font-size: 16px;
+            box-sizing: border-box;
+            border: none;
+        }
+
+        input,
+        select {
+            background: #2c2c2c;
+            color: #ffffff;
+        }
+
+        body.light-mode input,
+        body.light-mode select {
+            background: #ffffff;
+            color: #000000;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            background: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #444;
+            padding: 8px;
+            text-align: center;
+        }
+
+        body.light-mode th,
+        body.light-mode td {
+            border: 1px solid #ccc;
+        }
+
+        #resultado {
+            margin-top: 20px;
+            font-size: 18px;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <button class="toggle-theme" onclick="alternarTema()">Alternar Tema</button>
+        <h2>Conversor de Azimute ↔ Rumo</h2>
+
+        <div class="compass">
+            <img src="https://as2.ftcdn.net/jpg/00/21/43/31/1000_F_21433198_ykRD3M7QqUzQnKCTB8g13x9YjOOHHvh5.jpg"
+                alt="Bússola" />
+            <div class="arrow" id="arrow"></div>
+        </div>
+
+        <div class="form-group">
+            <select id="tipoConversao">
+                <option value="azimute">Azimute → Rumo</option>
+                <option value="rumo">Rumo → Azimute</option>
+            </select>
+
+            <input type="text" id="entrada" placeholder="Ex: 125 ou S 50° E" />
+            <input type="number" id="metros" placeholder="Metros (opcional)" />
+            <button onclick="converter()">Converter e Adicionar</button>
+        </div>
+
+        <div id="resultado"></div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Azimute</th>
+                    <th>Rumo</th>
+                    <th>Metros</th>
+                </tr>
+            </thead>
+            <tbody id="tabelaResultados"></tbody>
+        </table>
+    </div>
+
+    <script>
+        function alternarTema() {
+            document.body.classList.toggle('light-mode');
+            const temaAtual = document.body.classList.contains('light-mode') ? 'claro' : 'escuro';
+            localStorage.setItem('temaPreferido', temaAtual);
+        }
+
+        window.onload = () => {
+            const temaSalvo = localStorage.getItem('temaPreferido');
+            if (temaSalvo === 'claro') {
+                document.body.classList.add('light-mode');
+            }
+        };
+
+        function converter() {
+            const tipo = document.getElementById('tipoConversao').value;
+            const entrada = document.getElementById('entrada').value.trim();
+            const metros = document.getElementById('metros').value;
+            const resultado = document.getElementById('resultado');
+            const tabela = document.getElementById('tabelaResultados');
+            const arrow = document.getElementById('arrow');
+
+            let azimute = null;
+            let rumo = '';
+
+            if (tipo === 'azimute') {
+                azimute = parseFloat(entrada);
+                if (isNaN(azimute) || azimute < 0 || azimute > 360) {
+                    resultado.textContent = "Digite um azimute válido entre 0° e 360°.";
+                    return;
+                }
+
+                if (azimute === 0 || azimute === 360) {
+                    rumo = `0° N-E`;
+                } else if (azimute > 0 && azimute < 90) {
+                    rumo = `${azimute.toFixed(2)}° N-E`;
+                } else if (azimute >= 90 && azimute < 180) {
+                    rumo = `${(180 - azimute).toFixed(2)}° S-E`;
+                } else if (azimute >= 180 && azimute < 270) {
+                    rumo = `${(azimute - 180).toFixed(2)}° S-O`;
+                } else {
+                    rumo = `${(360 - azimute).toFixed(2)}° N-O`;
+                }
+            } else {
+                const match = entrada.match(/([NS])\s*(\d+(\.\d+)?)°?\s*([LOE])/i);
+                if (!match) {
+                    resultado.textContent = "Digite o rumo no formato correto, ex: S 50° E";
+                    return;
+                }
+
+                const dir1 = match[1].toUpperCase();
+                const graus = parseFloat(match[2]);
+                const dir2 = match[4].toUpperCase();
+
+                if (isNaN(graus) || graus < 0 || graus > 90) {
+                    resultado.textContent = "O rumo deve estar entre 0° e 90°.";
+                    return;
+                }
+
+                if (dir1 === 'N' && dir2 === 'E') azimute = graus;
+                else if (dir1 === 'S' && dir2 === 'E') azimute = 180 - graus;
+                else if (dir1 === 'S' && dir2 === 'O') azimute = 180 + graus;
+                else if (dir1 === 'N' && dir2 === 'O') azimute = 360 - graus;
+                else {
+                    resultado.textContent = "Quadrante inválido. Use N/S com E/O.";
+                    return;
+                }
+
+                rumo = `${graus.toFixed(2)}° ${dir1}-${dir2}`;
+            }
+
+            resultado.textContent = `Azimute: ${azimute.toFixed(2)}° | Rumo: ${rumo}`;
+            arrow.style.transform = `rotate(${azimute}deg)`;
+
+            const linha = document.createElement('tr');
+            linha.innerHTML = `
+        <td>${azimute.toFixed(2)}°</td>
+        <td>${rumo}</td>
+        <td>${metros || '-'}</td>
+      `;
+            tabela.appendChild(linha);
+        }
+    </script>
+</body>
+
+</html>
